@@ -1,4 +1,4 @@
-//querydsl 추가
+// Querydsl 버전 plugins 위에 추가
 buildscript {
     ext {
         queryDslVersion = "5.0.0"
@@ -6,10 +6,10 @@ buildscript {
 }
 
 plugins {
-    id 'java'
     id 'org.springframework.boot' version '2.7.12'
     id 'io.spring.dependency-management' version '1.0.15.RELEASE'
-    id 'com.ewerk.gradle.plugins.querydsl' version '1.0.10' // QueryDSL 플러그인 추가
+    id 'java'
+    id "com.ewerk.gradle.plugins.querydsl" version "1.0.10" // querydsl 플러그인 추가
 }
 
 group = 'com.example'
@@ -65,17 +65,17 @@ dependencies {
     implementation 'io.springfox:springfox-swagger2:2.9.2'
     implementation 'io.springfox:springfox-swagger-ui:2.9.2'
 
+    implementation 'org.apache.commons:commons-lang3:3.12.0' //문자필터
+
     // poi (엑셀 파일 처리용 라이브러리)
     implementation 'org.apache.poi:poi-ooxml:5.2.2'
 
-    // QueryDSL 관련 의존성 추가
     implementation "com.querydsl:querydsl-jpa:${queryDslVersion}"
     implementation "com.querydsl:querydsl-apt:${queryDslVersion}"
 
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
     annotationProcessor 'org.projectlombok:lombok'
-    annotationProcessor 'com.querydsl:querydsl-apt:${queryDslVersion}'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
 }
@@ -84,23 +84,22 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-// querydsl 사용할 경로 지정합니다. 현재 지정한 부분은 .gitignore에 포함되므로 git에 올라가지 않습니다.
-def querydslDir = "$buildDir/generated/'querydsl'"
+// querydsl에서 사용할 경로 설정(현재 지정한 부분은 .gitignore에 포함됨)
+def querydslDir = "$buildDir/generated/querydsl"
 
-// JPA 사용여부 및 사용 경로 설정
+// JPA 사용 여부 및 사용할 경로 설정
 querydsl {
     jpa = true
     querydslSourcesDir = querydslDir
 }
 
-// build시 사용할 sourceSet 추가 설정
+// build 시 사용할 sourceSet 추가 설정
 sourceSets {
     main.java.srcDir querydslDir
 }
 
-
 // querydsl 컴파일 시 사용할 옵션 설정
-compileQuerydsl {
+compileQuerydsl{
     options.annotationProcessorPath = configurations.querydsl
 }
 

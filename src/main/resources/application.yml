@@ -5,18 +5,28 @@ server:
       charset: UTF-8
 
 spring:
-
   output:
     ansi:
       enabled: always
 
   cache:
     type: redis
+    # Redis
     redis:
-      time-to-live: 3600 # 데이터 유지 시간(sec)
-      cache-null-values: true # null 캐싱 여부
+      pool:
+        max-active: 10  #pool이 바닥났을 때 예외 발생 전, 커넥션 할당 차단 최대 시간(단위 밀리세컨드, 음수는 무제한 차단)
+        max-idle: 10 #풀에서 관리하는 idle 커넥션의 최소수 대상 (양수일 때만 유효)
+        min-idle: 2 # pool에 할당될 수 있는 커넥션 최대수 (음수로 하면 무제한)
       host: localhost
       port: 6379
+      #password:
+      time-to-live: 3600 # 데이터 유지 시간(sec)
+      cache-null-values: true # null 캐싱 여부
+    # Session
+    session:
+      store-type: redis
+      redis:
+        flush-mode: on_save
 
   datasource:
     driver-class-name: org.mariadb.jdbc.Driver
@@ -36,7 +46,7 @@ spring:
         "[format_sql]": true            #SQL을 보기 좋게 출력
         "[user_sql_comments]": true     #SQL생성 시 주석 포함
         "[highlight_sql]": true         #SQL에 색깔
-        "[hbm2ddl.auto]": update  #create
+        "[hbm2ddl.auto]": create  #update
         naming:
           physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
           implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
@@ -48,9 +58,12 @@ spring:
 
 
 jwt:
-  secret: testtesttesttesttesttesttesttest
-
-
+  token:
+    access-token-secret-key: testesttestettttttttttttttttttttttttttttt
+    #access-token-secret-key: aG91Mjctc2ltcGxlLXNwcmluZy1ib290LWFwaS1qd3QK
+    access-token-expire-length: 300000
+    refresh-token-secret-key: cmVmcmVzaHRva2Vuc2VjcmV0a2V5Cg==
+    refresh-token-expire-length: 6000000
 
 logging:
   config: classpath:log4j2.yml

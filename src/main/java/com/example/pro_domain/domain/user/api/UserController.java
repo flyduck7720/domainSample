@@ -7,6 +7,7 @@ import com.example.pro_domain.domain.user.dto.ProfileDto;
 import com.example.pro_domain.domain.user.dto.ProfileDto.ProfileRes;
 import com.example.pro_domain.domain.user.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +20,7 @@ import java.util.List;
 /**
  * User 관련 HTTP 요청 처리
  */
+@Log4j2
 @RestController
 @RequestMapping("/user")
 @RequiredArgsConstructor
@@ -27,7 +29,8 @@ public class UserController {
 
   @GetMapping("/profile")
   public ProfileDto.ProfileRes profile(@AuthenticationPrincipal UserDetails userDetails) throws UserNotFoundException {
-    System.out.println("userDetails = " + userDetails);
+    log.info("userDetails = " + userDetails);
+    //System.out.println("userDetails = " + userDetails);
     User userDetail = userService.findByEmail(userDetails.getUsername())
         .orElseThrow(() -> new UserNotFoundException());
 

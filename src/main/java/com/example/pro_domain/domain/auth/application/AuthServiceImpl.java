@@ -10,6 +10,7 @@ import com.example.pro_domain.global.config.jwt.dto.RegenerateTokenDto;
 import com.example.pro_domain.global.config.jwt.dto.TokenDto;
 import com.example.pro_domain.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+@Log4j2
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -41,7 +43,8 @@ public class AuthServiceImpl implements AuthService {
   @Override
   @Transactional
   public SignUpRes signUp(SignUpReq signUpReq){
-    System.out.println("signUpReq = " + signUpReq.toString());
+    log.info("signUpReq = " + signUpReq.toString());
+    //System.out.println("signUpReq = " + signUpReq.toString());
 
     if(userRepository.existsByEmail(signUpReq.getEmail())) {
       return new SignUpRes(false, "Your Mail already Exist.");

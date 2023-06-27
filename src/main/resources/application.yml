@@ -49,7 +49,7 @@ spring:
         "[format_sql]": true            #SQL을 보기 좋게 출력
         "[user_sql_comments]": true     #SQL생성 시 주석 포함
         "[highlight_sql]": true         #SQL에 색깔
-        "[hbm2ddl.auto]": create  #update
+        "[hbm2ddl.auto]": update  #update
         #"[implicit_naming_strategy]": "org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy" -> 기본값으로 설정되어 있어서 따로 설정하지 않아도 무방함
     open-in-view: false
     show-sql: true
@@ -57,12 +57,7 @@ spring:
 
 
 jwt:
-  token:
-    access-token-secret-key: testesttestettttttttttttttttttttttttttttt
-    #access-token-secret-key: aG91Mjctc2ltcGxlLXNwcmluZy1ib290LWFwaS1qd3QK
-    access-token-expire-length: 300000
-    refresh-token-secret-key: cmVmcmVzaHRva2Vuc2VjcmV0a2V5Cg==
-    refresh-token-expire-length: 6000000
+  secret: testtesttesttesttesttesttesttest
 
 logging:
   config: classpath:log4j2.yml

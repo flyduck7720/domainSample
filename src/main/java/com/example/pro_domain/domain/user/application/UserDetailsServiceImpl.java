@@ -20,18 +20,28 @@ public class UserDetailsServiceImpl implements UserDetailsService {
   private UserRepository userRepository;
 
   @Override
-  public UserDetails loadUserByUsername(String memEmail) throws UserNotFoundException {
-    log.info("email in loadUserByUsername = " + memEmail);
+  public UserDetails loadUserByUsername(String userId) throws UserNotFoundException {
+    log.info("userId in loadUserByUsername = " + userId);
     //System.out.println("email in loadUserByUsername = " + email);
-    User user = userRepository.findByEmail(memEmail)
+    //User user = userRepository.findByEmail(email)
+    //    .orElseThrow(UserNotFoundException::new);
+
+    User user = userRepository.findByUserId(userId)
         .orElseThrow(UserNotFoundException::new);
+
+    log.info("++user++ = " + user);
+
     Set<GrantedAuthority> grantedAuthorities = new HashSet<>();
+
+    log.info("getUserId() = " + user.getUserId());
+    log.info("getPassword() = " + user.getPassword());
+    log.info("grantedAuthorities  = " + grantedAuthorities);
 
     return new org
         .springframework
         .security
         .core
         .userdetails
-        .User(user.getEmail(), user.getPassword(), grantedAuthorities);
+        .User(user.getUserId(), user.getPassword(), grantedAuthorities);
   }
 }

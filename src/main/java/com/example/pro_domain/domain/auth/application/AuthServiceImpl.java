@@ -27,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+import static com.example.pro_domain.global.config.jwt.JwtExpirationEnums.REFRESH_TOKEN_EXPIRATION_TIME;
+
 @Log4j2
 @Service
 @RequiredArgsConstructor
@@ -37,8 +39,6 @@ public class AuthServiceImpl implements AuthService {
   private final AuthenticationManager authenticationManager;
   private final RedisTemplate<String, String> redisTemplate;
 
-  @Value("${jwt.token.refresh-token-expire-length}")
-  private long refresh_token_expire_time;
 
   @Override
   @Transactional
@@ -46,7 +46,7 @@ public class AuthServiceImpl implements AuthService {
     log.info("signUpReq = " + signUpReq.toString());
     //System.out.println("signUpReq = " + signUpReq.toString());
 
-    if(userRepository.existsByEmail(signUpReq.getEmail())) {
+    if(userRepository.existsByEmail(signUpReq.getUserId())) {
       return new SignUpRes(false, "Your Mail already Exist.");
     }
     User newUser = signUpReq.toUserEntity();
@@ -64,15 +64,15 @@ public class AuthServiceImpl implements AuthService {
     try {
       Authentication authentication = authenticationManager.authenticate(
           new UsernamePasswordAuthenticationToken(
-              signInReq.getEmail(),
+              signInReq.getUserId(),
               signInReq.getPassword()
           )
       );
 
-      String refresh_token = jwtTokenProvider.generateRefreshToken(authentication);
+      String refresh_token = jwtTokenProvider.createAccessToken(authentication);
 
       TokenDto tokenDto = new TokenDto(
-          jwtTokenProvider.generateAccessToken(authentication),
+          jwtTokenProvider.createAccessToken(authentication),
           refresh_token
       );
 
@@ -80,7 +80,7 @@ public class AuthServiceImpl implements AuthService {
       redisTemplate.opsForValue().set(
               authentication.getName(),
               refresh_token,
-              refresh_token_expire_time,
+              REFRESH_TOKEN_EXPIRATION_TIME.getValue(),
               TimeUnit.MILLISECONDS
           );
 
@@ -103,7 +103,7 @@ public class AuthServiceImpl implements AuthService {
       }
 
       // Access Token 에서 User email를 가져온다.
-      Authentication authentication = jwtTokenProvider.getAuthenticationByRefreshToken(refresh_token);
+      Authentication authentication = jwtTokenProvider.getAuthentication(refresh_token);
 
       // Redis에서 저장된 Refresh Token 값을 가져온다.
       String refreshToken = redisTemplate.opsForValue().get(authentication.getName());
@@ -112,9 +112,9 @@ public class AuthServiceImpl implements AuthService {
       }
 
       // 토큰 재발행
-      String new_refresh_token = jwtTokenProvider.generateRefreshToken(authentication);
+      String new_refresh_token = jwtTokenProvider.createRefreshToken(authentication);
       TokenDto tokenDto = new TokenDto(
-          jwtTokenProvider.generateAccessToken(authentication),
+          jwtTokenProvider.createAccessToken(authentication),
           new_refresh_token
       );
 
@@ -122,7 +122,7 @@ public class AuthServiceImpl implements AuthService {
       redisTemplate.opsForValue().set(
           authentication.getName(),
           new_refresh_token,
-          refresh_token_expire_time,
+          REFRESH_TOKEN_EXPIRATION_TIME.getValue(),
           TimeUnit.MILLISECONDS
       );
 

@@ -28,6 +28,7 @@ public class AuthController {
     return authService.signUp(signUpReq);
   }
 
+  //로그인
   @PostMapping("/signIn")
   public ResponseEntity<TokenDto> signIn(@Validated SignInReq signInReq) {
     return authService.signIn(signInReq);

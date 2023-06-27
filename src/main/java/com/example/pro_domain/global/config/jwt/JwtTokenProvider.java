@@ -1,98 +1,103 @@
 package com.example.pro_domain.global.config.jwt;
 
+import com.example.pro_domain.domain.user.application.UserDetailsServiceImpl;
 import com.example.pro_domain.global.exception.CustomException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
-// 유저 정보로 JWT 토큰을 만들거나 토큰을 바탕으로 유저 정보를 가져옴
+import static com.example.pro_domain.global.config.jwt.JwtExpirationEnums.ACCESS_TOKEN_EXPIRATION_TIME;
+import static com.example.pro_domain.global.config.jwt.JwtExpirationEnums.REFRESH_TOKEN_EXPIRATION_TIME;
+
 @Component
+@RequiredArgsConstructor
+@Log4j2
 public class JwtTokenProvider {
-  @Value("${jwt.token.access-token-secret-key}")
-  private String access_token_secret_key;
 
-  @Value("${jwt.token.refresh-token-secret-key}")
-  private String refresh_token_secret_key;
+  private final RedisTemplate<String, String> redisTemplate;
 
-  @Value("${jwt.token.access-token-expire-length}")
-  private long access_token_expire_time;
-
-  @Value("${jwt.token.refresh-token-expire-length}")
-  private long refresh_token_expire_time;
+  @Value("${jwt.secret}")
+  private String SECRET_KEY;
 
   @Autowired
-  private UserDetailsService userDetailsService;
+  private UserDetailsServiceImpl userDetailsService;
+
 
   /**
-   * 적절한 설정을 통해 Access 토큰을 생성하여 반환
-   * @param authentication
-   * @return access token
+   * Access 토큰 생성
    */
-  public String generateAccessToken(Authentication authentication) {
+  public String createAccessToken(Authentication authentication){
     Claims claims = Jwts.claims().setSubject(authentication.getName());
-//    claims.put("auth", appUserRoles.stream().map(s -> new SimpleGrantedAuthority(s.getAuthority())).filter(Objects::nonNull).collect(Collectors.toList()));
-
     Date now = new Date();
-    Date expiresIn = new Date(now.getTime() + access_token_expire_time);
+    Date expireDate = new Date(now.getTime() + ACCESS_TOKEN_EXPIRATION_TIME.getValue());
 
     return Jwts.builder()
-        .setClaims(claims)
-        .setIssuedAt(now)
-        .setExpiration(expiresIn)
-        .signWith(SignatureAlgorithm.HS256, access_token_secret_key)
-        .compact();
+            .setClaims(claims)
+            .setIssuedAt(now)
+            .setExpiration(expireDate)
+            .signWith(getSigningKey(SECRET_KEY))
+            .compact();
+  }
+
+  private Key getSigningKey(String secretKey) {
+    byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
+    return Keys.hmacShaKeyFor(keyBytes);
   }
 
   /**
-   * 적절한 설정을 통해 Refresh 토큰을 생성하여 반환
-   * @param authentication
-   * @return refresh token
+   * Refresh 토큰 생성
    */
-  public String generateRefreshToken(Authentication authentication) {
+  public String createRefreshToken(Authentication authentication){
     Claims claims = Jwts.claims().setSubject(authentication.getName());
-
     Date now = new Date();
-    Date expiresIn = new Date(now.getTime() + refresh_token_expire_time);
+    Date expireDate = new Date(now.getTime() + REFRESH_TOKEN_EXPIRATION_TIME.getValue());
 
-    return Jwts.builder()
-        .setClaims(claims)
-        .setIssuedAt(now)
-        .setExpiration(expiresIn)
-        .signWith(SignatureAlgorithm.HS256, refresh_token_secret_key)
-        .compact();
+    String refreshToken = Jwts.builder()
+            .setClaims(claims)
+            .setIssuedAt(now)
+            .setExpiration(expireDate)
+            .signWith(getSigningKey(SECRET_KEY), SignatureAlgorithm.HS256)
+            .compact();
+
+    // redis에 저장
+    redisTemplate.opsForValue().set(
+            authentication.getName(),
+            refreshToken,
+            REFRESH_TOKEN_EXPIRATION_TIME.getValue(),
+            TimeUnit.MILLISECONDS
+    );
+
+    return refreshToken;
   }
 
-  /**
-   * Access 토큰으로부터 클레임을 만들고, 이를 통해 User 객체를 생성하여 Authentication 객체를 반환
-   * @param access_token
-   * @return
-   */
-  public Authentication getAuthenticationByAccessToken(String access_token) {
-    String userPrincipal = Jwts.parser().setSigningKey(access_token_secret_key).parseClaimsJws(access_token).getBody().getSubject();
-    UserDetails userDetails = userDetailsService.loadUserByUsername(userPrincipal);
-    
-    return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
-  }
 
   /**
-   * Refresh 토큰으로부터 클레임을 만들고, 이를 통해 User 객체를 생성하여 Authentication 객체를 반환
-   * @param refresh_token
-   * @return
+   * 토큰으로부터 클레임을 만들고, 이를 통해 User 객체 생성해 Authentication 객체 반환
    */
-  public Authentication getAuthenticationByRefreshToken(String refresh_token) {
-    String userPrincipal = Jwts.parser().setSigningKey(refresh_token_secret_key).parseClaimsJws(refresh_token).getBody().getSubject();
+  public Authentication getAuthentication(String token) throws CustomException {
+    String userPrincipal = Jwts.parser().
+            setSigningKey(SECRET_KEY)
+            .parseClaimsJws(token)
+            .getBody().getSubject();
     UserDetails userDetails = userDetailsService.loadUserByUsername(userPrincipal);
 
     return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
@@ -100,8 +105,6 @@ public class JwtTokenProvider {
 
   /**
    * http 헤더로부터 bearer 토큰을 가져옴.
-   * @param req
-   * @return
    */
   public String resolveToken(HttpServletRequest req) {
     String bearerToken = req.getHeader("Authorization");
@@ -111,6 +114,7 @@ public class JwtTokenProvider {
     return null;
   }
 
+
   /**
    * Access 토큰을 검증
    * @param token
@@ -118,7 +122,7 @@ public class JwtTokenProvider {
    */
   public boolean validateAccessToken(String token) {
     try {
-      Jwts.parser().setSigningKey(access_token_secret_key).parseClaimsJws(token);
+      Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token);
       return true;
     } catch (JwtException e) {
       // MalformedJwtException | ExpiredJwtException | IllegalArgumentException
@@ -133,11 +137,14 @@ public class JwtTokenProvider {
    */
   public boolean validateRefreshToken(String token) {
     try {
-      Jwts.parser().setSigningKey(refresh_token_secret_key).parseClaimsJws(token);
+      Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token);
       return true;
     } catch (JwtException e) {
       // MalformedJwtException | ExpiredJwtException | IllegalArgumentException
       throw new CustomException("Error on Refresh Token", HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+
 }
+

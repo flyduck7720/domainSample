@@ -20,6 +20,8 @@ public interface UserService {
    */
   Optional<User> findByEmail(String email);
 
+  Optional<User> findByUserId(String userId);
+
   /**
    * 이름을 통해 유저 조회
    * @param name

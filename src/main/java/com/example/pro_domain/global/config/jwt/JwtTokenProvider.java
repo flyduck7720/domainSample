@@ -50,6 +50,10 @@ public class JwtTokenProvider {
     Date now = new Date();
     Date expireDate = new Date(now.getTime() + ACCESS_TOKEN_EXPIRATION_TIME.getValue());
 
+    log.info("+ACCESS_TOKEN_EXPIRATION_TIME  = " + ACCESS_TOKEN_EXPIRATION_TIME.getValue());
+    log.info("+now  = " + now);
+    log.info("+expireDate  = " + expireDate);
+
     return Jwts.builder()
             .setClaims(claims)
             .setIssuedAt(now)
@@ -63,18 +67,17 @@ public class JwtTokenProvider {
     return Keys.hmacShaKeyFor(keyBytes);
   }
 
+
   /**
    * Refresh 토큰 생성
    */
   public String createRefreshToken(Authentication authentication){
     Claims claims = Jwts.claims().setSubject(authentication.getName());
-    Date now = new Date();
-    Date expireDate = new Date(now.getTime() + REFRESH_TOKEN_EXPIRATION_TIME.getValue());
 
     String refreshToken = Jwts.builder()
             .setClaims(claims)
-            .setIssuedAt(now)
-            .setExpiration(expireDate)
+            .setIssuedAt(new Date(System.currentTimeMillis()))
+            .setExpiration(new Date(System.currentTimeMillis() +  REFRESH_TOKEN_EXPIRATION_TIME.getValue()))
             .signWith(getSigningKey(SECRET_KEY), SignatureAlgorithm.HS256)
             .compact();
 

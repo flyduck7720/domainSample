@@ -69,7 +69,7 @@ public class AuthServiceImpl implements AuthService {
           )
       );
 
-      String refresh_token = jwtTokenProvider.createAccessToken(authentication);
+      String refresh_token = jwtTokenProvider.createRefreshToken(authentication);
 
       TokenDto tokenDto = new TokenDto(
           jwtTokenProvider.createAccessToken(authentication),
